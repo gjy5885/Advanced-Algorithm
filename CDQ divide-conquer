@@ -1,0 +1,98 @@
+cdq分治：
+
+Problem Link: https://www.luogu.com.cn/problem/P3810
+Solution： 第一维sort，第二维cdq divide-conquer，第三维树状数组
+Code:
+#include<bits/stdc++.h>
+using namespace std;
+struct BIT {
+  vector<long long> tr;
+  int n;
+  void init(int _n) {
+    n = _n;
+    tr.resize(n + 1);
+  }
+  inline int lowbit(int x) {
+    return x &(-x);
+  }
+  void Add(int x, int y) {
+    for (; x <= n;x += lowbit(x)) {
+      tr[x] += y;
+    }
+  }
+  long long GetSum(int x) {
+    long long sum = 0;
+    for (; x > 0; x -= lowbit(x)) {
+       sum += tr[x];
+    }
+    return sum;
+  }
+}bit;
+    
+class CDQ {
+public:
+  struct ACTION {
+     int id; //original id
+     int name; //0: modify 1: query
+     int x, y, z, sum;
+     ACTION(int _id, int _name, int _x, int _y, int _z, int _sum) {
+        id = _id; name = _name; x = _x; y = _y; z = _z; sum = _sum;
+     }
+  };
+  vector<ACTION> actions;
+  static bool cmp1(ACTION a, ACTION b) {
+    return a.x < b.x || (a.x == b.x && a.y < b.y) || 
+    (a.x == b.x && a.y == b.y && a.z < b.z);
+  }
+  
+  static bool cmp2(ACTION a, ACTION b) {
+    return a.y < b.y || (a.y == b.y && a.z < b.z);
+  }
+  
+  void work(int l, int r) {
+    if (l == r) return;
+    int mid = l + r >> 1;
+    work(l, mid);
+    work(mid + 1, r);
+    sort(actions.begin() + l, actions.begin() + mid + 1, cmp2);
+    sort(actions.begin() + mid + 1, actions.begin() + r + 1, cmp2);
+    int j = l; 
+    for (int i = mid + 1; i <= r; ++i) {
+      for (;j <= mid  && actions[j].y <= actions[i].y; ++j) bit.Add(actions[j].z, 1);
+      actions[i].sum += bit.GetSum(actions[i].z);
+    }
+    for (int i = l; i < j; ++i) bit.Add(actions[i].z, -1);
+  }
+};
+int main() {
+  
+  int n, m;
+  cin >> n >> m;
+  bit.init(m);
+  CDQ cdq;
+  for (int i = 0; i < n; ++i) {
+    int x, y, z;
+    cin >> x >> y >> z;
+    cdq.actions.push_back(CDQ::ACTION(i, 1, x, y, z, 0));
+  } 
+  sort(cdq.actions.begin(), cdq.actions.end(), cdq.cmp1);
+  CDQ::ACTION last_action = CDQ::ACTION(-1, 1, -1, -1, -1, 0);
+  int cnt = 0;
+  for (int i = n - 1; i >= 0; --i) {
+    auto &action = cdq.actions[i];
+    if (last_action.x == action.x && last_action.y == action.y && last_action.z == action.z) {
+      cnt++;
+      action.sum += cnt;
+    } else {
+      cnt = 0;
+      last_action = action;
+    }
+   
+  }
+  cdq.work(0, n - 1);
+  vector<int> f(n + 1);
+  for (int i = 0; i < n; ++i) {
+    f[cdq.actions[i].sum]++;
+  }
+  for (int i = 0; i < n; ++i) cout << f[i] << endl;
+}
